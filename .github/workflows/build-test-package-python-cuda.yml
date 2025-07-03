@@ -202,3 +202,49 @@ jobs:
         skip_existing: true
         user: __token__
         password: ${{ secrets.pypi_password }}
+
+  test-linux-python:
+    needs:
+      - build-linux-cuda-python-packages
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install build dependencies
+        shell: bash
+        run: |
+          if [[ -f ./examples/requirements.txt ]]; then
+            python -m pip install -r ./examples/requirements.txt
+          elif [[ -f requirements.txt ]]; then
+            python -m pip install -r requirements.txt
+          elif [[ -f ./binder/requirements.txt ]]; then
+            python -m pip install -r ./binder/requirements.txt
+          fi
+          python -m pip install pytest nbmake
+
+      - name: Download Python Package Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: LinuxWheel311_2_28-x64
+
+      - name: Install Python Package Artifact
+        run: |
+          ls .
+          wheel_name_full=`(find . -name "*cp311*-manylinux_2_28_x86_64.whl")`
+          echo "wheel_name_full ${wheel_name_full}"
+          # extract wheel name which may be an abbreviation of the module name
+          # ex. ./itk_splitcomponents-cp310..._64.whl -> itk-splitcomponents
+          wheel_name_prefix=`(echo ${wheel_name_full} | cut -d'-' -f1 | cut -d'/' -f2 | sed -e 's/_/-/g')`
+          echo "wheel_name_prefix ${wheel_name_prefix}"
+          python -m pip uninstall ${wheel_name_prefix} -y
+          python -m pip install ${wheel_name_full}
+
+      - name: Tests python
+        run: |
+          ctest -L Python -VV
+
