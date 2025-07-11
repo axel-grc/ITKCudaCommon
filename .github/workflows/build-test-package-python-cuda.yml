@@ -202,3 +202,50 @@ jobs:
         skip_existing: true
         user: __token__
         password: ${{ secrets.pypi_password }}
+
+  test-python-wheel:
+    needs:
+      - build-linux-cuda-python-packages
+    runs-on: self-hosted-linux
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Download all wheel artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: wheels
+        
+    - name: Test python wheel
+      run: |
+        # Set up a virtual environment
+        python3 -m venv test_venv
+        source test_venv/bin/activate
+        
+        # List all available wheels for debugging
+        find wheels -name "*.whl" -type f
+        
+        # Find the CUDA 124 wheel for Python 3.10 dynamically
+        wheel=$(find wheels -name "*cuda124*cp310*manylinux_2_28*.whl" -type f | head -1)
+  
+        echo "Installing wheel: $wheel"
+        pip install $wheel --force-reinstall
+
+        # Create build directory for testing
+        mkdir -p build
+        cd build
+
+        # Configure CMake with Python tests enabled
+        cmake $GITHUB_WORKSPACE \
+          -DITK_DIR=$GITHUB_WORKSPACE/../ITK-build \
+          -DBUILD_TESTING=ON \
+          -DCudaCommon_PYTHON_TESTS=ON \
+
+        # Run CTest with Python label
+        ctest -L Python -VV
+        
+        # Return to original directory
+        cd ..
+        
+        # Deactivate virtual environment
+        deactivate

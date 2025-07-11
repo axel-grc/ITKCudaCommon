@@ -19,7 +19,26 @@ itk_add_test(NAME itkCudaSquareImageFilterTest
   itkCudaSquareImageFilterTest
   )
 
-if(ITK_WRAP_PYTHON)
-  itk_python_add_test(NAME itkCudaImageFromImagePythonTest
-    COMMAND itkCudaImageFromImageTest.py)
+# -----------------------------------------------------------------------------
+# cudacommon_python_test(testname script [ARGS...])
+function(cudacommon_python_test testname script)
+  if(NOT Python3_EXECUTABLE)
+    find_package(Python3 COMPONENTS Interpreter REQUIRED)
+  endif()
+
+  # Create the test: run "python script [ARGS...]"
+  add_test(NAME ${testname}
+    COMMAND ${Python3_EXECUTABLE} ${script} ${ARGN}
+  )
+
+  set_tests_properties(${testname}
+    PROPERTIES
+      LABELS        "Python"
+      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+  )
+endfunction()
+
+# -----------------------------------------------------------------------------
+if(CudaCommon_PYTHON_TESTS)
+    cudacommon_python_test(itkCudaImageFromImagePythonTest itkCudaImageFromImageTest.py)
 endif()

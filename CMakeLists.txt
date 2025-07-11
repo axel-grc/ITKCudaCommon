@@ -21,6 +21,10 @@ endif()
 set(CudaCommon_LIBRARIES CudaCommon)
 set(CudaCommon_INCLUDE_DIRS ${CudaCommon_SOURCE_DIR}/include ${CUDAToolkit_INCLUDE_DIRS})
 
+# ----------------------------------------------------------------------------
+# Enable Python tests
+option(CudaCommon_PYTHON_TESTS "Enable registration of Python-based CTest tests" OFF)
+
 # --------------------------------------------------------
 # Find ITK (required)
 if(NOT ITK_SOURCE_DIR)
