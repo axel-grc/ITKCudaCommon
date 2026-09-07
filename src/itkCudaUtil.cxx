@@ -19,6 +19,8 @@
 #include <cassert>
 #include <iostream>
 #include <algorithm>
+#include <mutex>
+#include <itksys/SystemTools.hxx>
 
 namespace itk
 {
@@ -107,6 +109,64 @@ CudaGetMaxFlopsDev()
   return max_flops_device;
 }
 
+namespace
+{
+static constexpr const char * CUDA_DEFAULT_DEVICE_ENV = "ITK_CUDA_DEFAULT_DEVICE";
+
+struct CudaDefaultDeviceGlobals
+{
+  // The explicitly-set default device (-1 = auto). Only meaningful once
+  // IsInitialized is true. Env var is only a fallback until then.
+  bool       IsInitialized{ false };
+  int        Device{ -1 };
+  std::mutex Mutex;
+};
+
+CudaDefaultDeviceGlobals &
+GetCudaDefaultDeviceGlobals()
+{
+  static CudaDefaultDeviceGlobals globals;
+  return globals;
+}
+} // namespace
+
+void
+SetDefaultCudaDevice(int device)
+{
+  int count = 0;
+  cudaGetDeviceCount(&count);
+  if (device < -1 || device >= count)
+  {
+    itkGenericExceptionMacro("Invalid CUDA device index: " << device);
+  }
+
+  auto &                            globals = GetCudaDefaultDeviceGlobals();
+  const std::lock_guard<std::mutex> lock(globals.Mutex);
+  globals.Device = device;
+  globals.IsInitialized = true;
+}
+
+/** Get the current default device (-1 means auto / max FLOPS).
+ *  Precedence: explicitly set value > environment variable > auto. */
+int
+GetDefaultCudaDevice()
+{
+  auto &                            globals = GetCudaDefaultDeviceGlobals();
+  const std::lock_guard<std::mutex> lock(globals.Mutex);
+
+  if (globals.IsInitialized)
+  {
+    return globals.Device;
+  }
+
+  std::string envDevice;
+  if (itksys::SystemTools::GetEnv(CUDA_DEFAULT_DEVICE_ENV, envDevice))
+  {
+    return std::atoi(envDevice.c_str());
+  }
+
+  return -1;
+}
 
 std::pair<int, int>
 GetCudaComputeCapability(int device)

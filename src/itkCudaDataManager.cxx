@@ -24,7 +24,11 @@ namespace itk
 // constructor
 CudaDataManager::CudaDataManager()
 {
-  m_Device = itk::CudaGetMaxFlopsDev();
+  m_Device = itk::GetDefaultCudaDevice();
+  if (m_Device == -1)
+  {
+    m_Device = itk::CudaGetMaxFlopsDev();
+  }
   CUDA_CHECK(cudaSetDevice(m_Device));
 
   m_CPUBuffer = nullptr;
@@ -286,6 +290,18 @@ CudaDataManager::PrintSelf(std::ostream & os, Indent indent) const
   os << indent << "m_GPUBuffer: " << m_GPUBuffer << std::endl;
   os << indent << "m_IsCPUBufferDirty: " << m_IsCPUBufferDirty << std::endl;
   os << indent << "m_CPUBuffer: " << m_CPUBuffer << std::endl;
+}
+
+void
+CudaDataManager::SetDefaultDevice(int device)
+{
+  itk::SetDefaultCudaDevice(device);
+}
+
+int
+CudaDataManager::GetDefaultDevice()
+{
+  return itk::GetDefaultCudaDevice();
 }
 
 } // namespace itk

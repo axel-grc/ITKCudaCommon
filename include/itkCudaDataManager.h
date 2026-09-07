@@ -252,6 +252,15 @@ public:
     return m_GPUBuffer->GetBufferSize();
   }
 
+  /** Set the default device used by all subsequently created CudaDataManagers.
+   * Use -1 to reset to automatic selection (max FLOPS device). Delegates to itk::SetDefaultCudaDevice. */
+  static void
+  SetDefaultDevice(int device);
+
+  /** Get the current default device (-1 means auto / max FLOPS). Delegates to itk::GetDefaultCudaDevice. */
+  static int
+  GetDefaultDevice();
+
 protected:
   CudaDataManager();
   ~CudaDataManager() override;
